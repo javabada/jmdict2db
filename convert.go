@@ -7,7 +7,15 @@ import (
 	"log"
 	"os"
 	"regexp"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
+
+type Entity struct {
+	Name  string `gorm:"primaryKey;notNull"`
+	Value string `gorm:"notNull"`
+}
 
 func main() {
 	f, err := os.Open("sample.xml")
@@ -16,10 +24,14 @@ func main() {
 	}
 	defer f.Close()
 
-	d := xml.NewDecoder(f)
+	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	m := make(map[string]string)
-	m["err"] = "0"
+	db.AutoMigrate(&Entity{})
+
+	d := xml.NewDecoder(f)
 
 	for {
 		t, err := d.Token()
@@ -34,6 +46,10 @@ func main() {
 		case xml.Directive:
 			if bytes.HasPrefix(el, []byte("DOCTYPE")) {
 				d.Entity = entitiesToMap(el)
+
+				test := entityMapToSlice(d.Entity)
+
+				db.CreateInBatches(test, len(test))
 			}
 		}
 	}
@@ -48,4 +64,12 @@ func entitiesToMap(e []byte) map[string]string {
 		m[string(v[1])] = string(v[2])
 	}
 	return m
+}
+
+func entityMapToSlice(m map[string]string) []Entity {
+	s := make([]Entity, 0)
+	for k, v := range m {
+		s = append(s, Entity{Name: k, Value: v})
+	}
+	return s
 }
