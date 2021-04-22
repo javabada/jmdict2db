@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"io"
 	"log"
 	"os"
@@ -23,6 +24,12 @@ func main() {
 		log.Fatal(err)
 	}
 	defer f.Close()
+
+	if err := os.Remove("test.db"); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Fatal(err)
+		}
+	}
 
 	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	if err != nil {
