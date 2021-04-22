@@ -45,31 +45,27 @@ func main() {
 		switch el := t.(type) {
 		case xml.Directive:
 			if bytes.HasPrefix(el, []byte("DOCTYPE")) {
-				d.Entity = entitiesToMap(el)
+				d.Entity = entityBytesToMap(el)
 
-				test := entityMapToSlice(d.Entity)
+				var s []Entity
+				for k, v := range d.Entity {
+					s = append(s, Entity{k, v})
+				}
 
-				db.CreateInBatches(test, len(test))
+				db.CreateInBatches(s, len(s))
 			}
 		}
 	}
 }
 
-var reEntity = regexp.MustCompile(`<!ENTITY\s+(\S+)\s+"(.+)">`)
+var reEntity = regexp.MustCompile(`<!ENTITY\s+(\S+)\s+"([^"]+)">`)
 
-// entitiesToMap finds DTD entities from a byte slice and puts them in a map
-func entitiesToMap(e []byte) map[string]string {
+// entityBytesToMap finds DTD entities from a byte slice and returns a map of
+// those entities. This also filters out duplicates.
+func entityBytesToMap(b []byte) map[string]string {
 	m := make(map[string]string)
-	for _, v := range reEntity.FindAllSubmatch(e, -1) {
+	for _, v := range reEntity.FindAllSubmatch(b, -1) {
 		m[string(v[1])] = string(v[2])
 	}
 	return m
-}
-
-func entityMapToSlice(m map[string]string) []Entity {
-	s := make([]Entity, 0)
-	for k, v := range m {
-		s = append(s, Entity{Name: k, Value: v})
-	}
-	return s
 }
