@@ -31,10 +31,10 @@ func main() {
 
 	db.AutoMigrate(&Entity{})
 
-	d := xml.NewDecoder(f)
+	dec := xml.NewDecoder(f)
 
 	for {
-		t, err := d.Token()
+		tok, err := dec.Token()
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -42,15 +42,23 @@ func main() {
 			log.Fatal(err)
 		}
 
-		switch el := t.(type) {
+		switch t := tok.(type) {
 		case xml.Directive:
-			if bytes.HasPrefix(el, []byte("DOCTYPE")) {
-				d.Entity = entityBytesToMap(el)
-
+			if bytes.HasPrefix(t, []byte("DOCTYPE")) {
+				// Document type definition (DTD)
+				// Create a dummy entity map for the decoder, which maps the entity name
+				// to the name itself, e.g. {"key1": "key1", "key2": "key2"}.
+				// This is so the decoder can interpret those entities, and the
+				// unmarshaler simply stores them by name.
+				// Also create an entity slice for GORM to store in DB
+				m := make(map[string]string)
 				var s []Entity
-				for k, v := range d.Entity {
+				for k, v := range entityBytesToMap(t) {
+					m[k] = k
 					s = append(s, Entity{k, v})
 				}
+
+				dec.Entity = m
 
 				db.CreateInBatches(s, len(s))
 			}
