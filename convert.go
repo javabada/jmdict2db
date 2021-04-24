@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql/driver"
 	"encoding/xml"
 	"errors"
 	"io"
@@ -19,38 +20,64 @@ type Entity struct {
 }
 
 type Entry struct {
-	Seq   uint    `xml:"ent_seq" gorm:"primaryKey"`
-	Kanji []Kanji `xml:"k_ele"`
-	// Reading  []Reading `xml:"r_ele"`
+	Seq     uint      `xml:"ent_seq" gorm:"primaryKey"`
+	Kanji   []Kanji   `xml:"k_ele"`
+	Reading []Reading `xml:"r_ele"`
 }
 
 type Kanji struct {
-	ID       uint
-	EntrySeq uint            `gorm:"notNull"`
-	Element  string          `xml:"keb" gorm:"notNull"`
-	Info     []KanjiInfo     `xml:"ke_inf"`
-	Priority []KanjiPriority `xml:"ke_pri"`
+	ID         uint
+	EntrySeq   uint
+	Element    string          `xml:"keb" gorm:"notNull"`
+	Info       []KanjiInfo     `xml:"ke_inf"`
+	Priorities []KanjiPriority `xml:"ke_pri"`
 }
 
 type KanjiInfo struct {
 	ID      uint
-	KanjiID uint   `gorm:"notNull"`
-	Tag     string `xml:",chardata" gorm:"notNull"`
+	KanjiID uint
+	Code    string `xml:",chardata" gorm:"notNull"`
 }
 
 type KanjiPriority struct {
 	ID      uint
-	KanjiID uint   `gorm:"notNull"`
-	Tag     string `xml:",chardata" gorm:"notNull"`
+	KanjiID uint
+	Code    string `xml:",chardata" gorm:"notNull"`
 }
 
-// type Reading struct {
-// 	Element     string    `xml:"reb"`
-// 	NoKanji     *struct{} `xml:"re_nokanji"` // nil means false
-// 	Restriction []string  `xml:"re_restr"`
-// 	Info        []string  `xml:"re_inf"`
-// 	Priority    []string  `xml:"re_pri"`
-// }
+type Reading struct {
+	ID           uint
+	EntrySeq     uint
+	Element      string               `xml:"reb" gorm:"notNull"`
+	NoKanji      *Exist               `xml:"re_nokanji" gorm:"notNull"`
+	Restrictions []ReadingRestriction `xml:"re_restr"`
+	Info         []ReadingInfo        `xml:"re_inf"`
+	Priorities   []ReadingPriority    `xml:"re_pri"`
+}
+
+type ReadingRestriction struct {
+	ID           uint
+	ReadingID    uint
+	KanjiElement string `xml:",chardata" gorm:"notNull"`
+}
+
+type ReadingInfo struct {
+	ID        uint
+	ReadingID uint
+	Code      string `xml:",chardata" gorm:"notNull"`
+}
+
+type ReadingPriority struct {
+	ID        uint
+	ReadingID uint
+	Code      string `xml:",chardata" gorm:"notNull"`
+}
+
+type Exist struct{}
+
+func (e *Exist) Value() (driver.Value, error) {
+	return e != nil, nil
+}
 
 func main() {
 	f, err := os.Open("sample.xml")
@@ -75,6 +102,10 @@ func main() {
 	db.AutoMigrate(&Kanji{})
 	db.AutoMigrate(&KanjiInfo{})
 	db.AutoMigrate(&KanjiPriority{})
+	db.AutoMigrate(&Reading{})
+	db.AutoMigrate(&ReadingRestriction{})
+	db.AutoMigrate(&ReadingInfo{})
+	db.AutoMigrate(&ReadingPriority{})
 
 	dec := xml.NewDecoder(f)
 
