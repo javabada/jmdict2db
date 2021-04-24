@@ -23,14 +23,15 @@ type Entry struct {
 	Seq     uint      `xml:"ent_seq" gorm:"primaryKey"`
 	Kanji   []Kanji   `xml:"k_ele"`
 	Reading []Reading `xml:"r_ele"`
+	Sense   []Sense   `xml:"sense"`
 }
 
 type Kanji struct {
-	ID         uint
-	EntrySeq   uint
-	Element    string          `xml:"keb" gorm:"notNull"`
-	Info       []KanjiInfo     `xml:"ke_inf"`
-	Priorities []KanjiPriority `xml:"ke_pri"`
+	ID       uint
+	EntrySeq uint
+	Element  string          `xml:"keb" gorm:"notNull"`
+	Info     []KanjiInfo     `xml:"ke_inf"`
+	Priority []KanjiPriority `xml:"ke_pri"`
 }
 
 type KanjiInfo struct {
@@ -46,13 +47,13 @@ type KanjiPriority struct {
 }
 
 type Reading struct {
-	ID           uint
-	EntrySeq     uint
-	Element      string               `xml:"reb" gorm:"notNull"`
-	NoKanji      *Exist               `xml:"re_nokanji" gorm:"notNull"`
-	Restrictions []ReadingRestriction `xml:"re_restr"`
-	Info         []ReadingInfo        `xml:"re_inf"`
-	Priorities   []ReadingPriority    `xml:"re_pri"`
+	ID          uint
+	EntrySeq    uint
+	Element     string               `xml:"reb" gorm:"notNull"`
+	NoKanji     *Exist               `xml:"re_nokanji" gorm:"notNull"`
+	Restriction []ReadingRestriction `xml:"re_restr"`
+	Info        []ReadingInfo        `xml:"re_inf"`
+	Priority    []ReadingPriority    `xml:"re_pri"`
 }
 
 type ReadingRestriction struct {
@@ -71,6 +72,25 @@ type ReadingPriority struct {
 	ID        uint
 	ReadingID uint
 	Code      string `xml:",chardata" gorm:"notNull"`
+}
+
+type Sense struct {
+	ID                 uint
+	EntrySeq           uint
+	KanjiRestriction   []SenseKanjiRestriction   `xml:"stagk"`
+	ReadingRestriction []SenseReadingRestriction `xml:"stagr"`
+}
+
+type SenseKanjiRestriction struct {
+	ID           uint
+	SenseID      uint
+	KanjiElement string `xml:",chardata" gorm:"notNull"`
+}
+
+type SenseReadingRestriction struct {
+	ID             uint
+	SenseID        uint
+	ReadingElement string `xml:",chardata" gorm:"notNull"`
 }
 
 type Exist struct{}
@@ -106,6 +126,9 @@ func main() {
 	db.AutoMigrate(&ReadingRestriction{})
 	db.AutoMigrate(&ReadingInfo{})
 	db.AutoMigrate(&ReadingPriority{})
+	db.AutoMigrate(&Sense{})
+	db.AutoMigrate(&SenseKanjiRestriction{})
+	db.AutoMigrate(&SenseReadingRestriction{})
 
 	dec := xml.NewDecoder(f)
 
