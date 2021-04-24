@@ -84,6 +84,10 @@ type Sense struct {
 	PartOfSpeech       []SensePartOfSpeech       `xml:"pos"`
 	FieldOfApplication []SenseFieldOfApplication `xml:"field"`
 	MiscInfo           []SenseMiscInfo           `xml:"misc"`
+	SourceLanguage     []SenseSourceLanguage     `xml:"lsource"`
+	Dialect            []SenseDialect            `xml:"dial"`
+	Gloss              []SenseGloss              `xml:"gloss"`
+	MoreInfo           []SenseMoreInfo           `xml:"s_inf"`
 }
 
 type SenseKanjiRestriction struct {
@@ -123,6 +127,34 @@ type SenseFieldOfApplication struct {
 }
 
 type SenseMiscInfo struct {
+	ID      uint
+	SenseID uint
+	Code    string `xml:",chardata" gorm:"notNull"`
+}
+
+type SenseSourceLanguage struct {
+	ID       uint
+	SenseID  uint
+	Language string `xml:"xml:lang,attr"`
+	Partial  bool   `xml:"ls_type,attr"`
+	Wasei    bool   `xml:"ls_wasei,attr"`
+	Word     string `xml:",chardata"`
+}
+
+type SenseDialect struct {
+	ID      uint
+	SenseID uint
+	Code    string `xml:",chardata" gorm:"notNull"`
+}
+
+type SenseGloss struct {
+	ID      uint
+	SenseID uint
+	Type    *string `xml:"g_type,attr"`
+	Item    string  `xml:",chardata"`
+}
+
+type SenseMoreInfo struct {
 	ID      uint
 	SenseID uint
 	Code    string `xml:",chardata" gorm:"notNull"`
@@ -169,6 +201,9 @@ func main() {
 	db.AutoMigrate(&SensePartOfSpeech{})
 	db.AutoMigrate(&SenseFieldOfApplication{})
 	db.AutoMigrate(&SenseMiscInfo{})
+	db.AutoMigrate(&SenseSourceLanguage{})
+	db.AutoMigrate(&SenseDialect{})
+	db.AutoMigrate(&SenseGloss{})
 
 	dec := xml.NewDecoder(f)
 
