@@ -79,6 +79,11 @@ type Sense struct {
 	EntrySeq           uint
 	KanjiRestriction   []SenseKanjiRestriction   `xml:"stagk"`
 	ReadingRestriction []SenseReadingRestriction `xml:"stagr"`
+	CrossReference     []SenseCrossReference     `xml:"xref"`
+	Antonym            []SenseAntonym            `xml:"ant"`
+	PartOfSpeech       []SensePartOfSpeech       `xml:"pos"`
+	FieldOfApplication []SenseFieldOfApplication `xml:"field"`
+	MiscInfo           []SenseMiscInfo           `xml:"misc"`
 }
 
 type SenseKanjiRestriction struct {
@@ -91,6 +96,36 @@ type SenseReadingRestriction struct {
 	ID             uint
 	SenseID        uint
 	ReadingElement string `xml:",chardata" gorm:"notNull"`
+}
+
+type SenseCrossReference struct {
+	ID      uint
+	SenseID uint
+	Content string `xml:",chardata" gorm:"notNull"`
+}
+
+type SenseAntonym struct {
+	ID      uint
+	SenseID uint
+	Element string `xml:",chardata" gorm:"notNull"`
+}
+
+type SensePartOfSpeech struct {
+	ID      uint
+	SenseID uint
+	Code    string `xml:",chardata" gorm:"notNull"`
+}
+
+type SenseFieldOfApplication struct {
+	ID      uint
+	SenseID uint
+	Code    string `xml:",chardata" gorm:"notNull"`
+}
+
+type SenseMiscInfo struct {
+	ID      uint
+	SenseID uint
+	Code    string `xml:",chardata" gorm:"notNull"`
 }
 
 type Exist struct{}
@@ -129,6 +164,11 @@ func main() {
 	db.AutoMigrate(&Sense{})
 	db.AutoMigrate(&SenseKanjiRestriction{})
 	db.AutoMigrate(&SenseReadingRestriction{})
+	db.AutoMigrate(&SenseCrossReference{})
+	db.AutoMigrate(&SenseAntonym{})
+	db.AutoMigrate(&SensePartOfSpeech{})
+	db.AutoMigrate(&SenseFieldOfApplication{})
+	db.AutoMigrate(&SenseMiscInfo{})
 
 	dec := xml.NewDecoder(f)
 
