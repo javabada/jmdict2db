@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"database/sql/driver"
 	"encoding/xml"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -135,10 +137,10 @@ type SenseMiscInfo struct {
 type SenseSourceLanguage struct {
 	ID       uint
 	SenseID  uint
-	Language string `xml:"xml:lang,attr"`
-	Partial  bool   `xml:"ls_type,attr"`
-	Wasei    bool   `xml:"ls_wasei,attr"`
-	Word     string `xml:",chardata"`
+	Language *string `xml:"lang,attr"`
+	Partial  *string `xml:"ls_type,attr"`
+	Wasei    *string `xml:"ls_wasei,attr"`
+	Word     *string `xml:",chardata"`
 }
 
 type SenseDialect struct {
@@ -167,11 +169,18 @@ func (e *Exist) Value() (driver.Value, error) {
 }
 
 func main() {
-	f, err := os.Open("sample.xml")
+	start := time.Now()
+	f, err := os.Open("JMdict_e.gz")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer f.Close()
+
+	r, err := gzip.NewReader(f)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer r.Close()
 
 	if err := os.Remove("test.db"); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
@@ -204,10 +213,16 @@ func main() {
 	db.AutoMigrate(&SenseSourceLanguage{})
 	db.AutoMigrate(&SenseDialect{})
 	db.AutoMigrate(&SenseGloss{})
+	db.AutoMigrate(&SenseMoreInfo{})
 
-	dec := xml.NewDecoder(f)
+	dec := xml.NewDecoder(r)
 
-	for {
+	curr := 0
+
+	var batch []Entry
+	// batchIndex := 0
+
+	for curr < 20000 {
 		tok, err := dec.Token()
 		if err != nil {
 			if err == io.EOF {
@@ -238,12 +253,23 @@ func main() {
 			}
 		case xml.StartElement:
 			if t.Name.Local == "entry" {
+				curr++
 				var e Entry
 				dec.DecodeElement(&e, &t)
-				db.Create(e)
+
+				batch = append(batch, e)
+
+				if len(batch) == 500 {
+					db.CreateInBatches(batch, 500)
+					batch = nil
+					// TODO: the last batch (remaining)
+				}
 			}
 		}
 	}
+
+	elapsed := time.Since(start)
+	log.Printf("Took %s", elapsed)
 }
 
 var reEntity = regexp.MustCompile(`<!ENTITY\s+(\S+)\s+"([^"]+)">`)
