@@ -15,6 +15,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const batchSize = 500
+
 func main() {
 	start := time.Now()
 
@@ -50,11 +52,10 @@ func main() {
 
 	dec := xml.NewDecoder(r)
 
-	curr := 0 // TODO: used while dev, remove later
-
 	var batch []Entry
+	var done chan bool
 
-	for curr < 20000 {
+	for {
 		tok, err := dec.Token()
 		if err != nil {
 			if err == io.EOF {
@@ -71,7 +72,7 @@ func main() {
 				// to the name itself, e.g. {"key1": "key1", "key2": "key2"}.
 				// This is so the decoder can interpret those entities, and store them
 				// by name when unmarshaling.
-				// Also create an entity slice for GORM to store in DB
+				// Also create an entity slice for GORM to store in DB.
 				m := make(map[string]string)
 				var s []Entity
 				for k, v := range entityBytesToMap(t) {
@@ -84,22 +85,38 @@ func main() {
 			}
 		case xml.StartElement:
 			if t.Name.Local == "entry" {
-				curr++
+				// JMdict entry
+				// Unmarshal entries and batch insert them into the DB.
+				// Handle writes in a new goroutine. Wait for the current batch to
+				// finish before handling the next batch to avoid concurrent writes.
 				var e Entry
 				dec.DecodeElement(&e, &t)
-
 				batch = append(batch, e)
 
-				if len(batch) == 500 {
-					db.CreateInBatches(batch, 500)
+				if len(batch) == batchSize {
+					if done != nil {
+						<-done
+					}
+					done = make(chan bool)
+					go insertBatch(db, batch, done)
 					batch = nil
-					// TODO: the last batch (remaining)
 				}
 			}
 		}
 	}
 
+	// Handle final batch
+	<-done
+	insertBatch(db, batch, nil)
+
 	log.Printf("Done. Took %s", time.Since(start))
+}
+
+func insertBatch(db *gorm.DB, b []Entry, done chan bool) {
+	db.CreateInBatches(b, len(b))
+	if done != nil {
+		done <- true
+	}
 }
 
 var reEntity = regexp.MustCompile(`<!ENTITY\s+(\S+)\s+"([^"]+)">`)
