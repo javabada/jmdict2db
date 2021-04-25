@@ -10,3 +10,10 @@ More information and the dictionary file can be found
 
 A tiny subset of the dictionary can be found in `sample.xml`, which contains the
 XML DTD and a few entries.
+
+## Notes
+
+- This program has been written for the English-only JMdict file. It is missing
+  some fields that are only found in the full dictionary file.
+- Order is important to some dictionary elements. However the output from this
+  program does not record this, and makes no guarantee that order is preserved
