@@ -15,12 +15,14 @@ import (
 	"gorm.io/gorm"
 )
 
+const inFile = "JMdict_e.gz"
+const outFile = "jmdict.db"
 const batchSize = 500
 
 func main() {
 	start := time.Now()
 
-	f, err := os.Open("JMdict_e.gz")
+	f, err := os.Open(inFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,13 +34,13 @@ func main() {
 	}
 	defer r.Close()
 
-	if err := os.Remove("test.db"); err != nil {
+	if err := os.Remove(outFile); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			log.Fatal(err)
 		}
 	}
 
-	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(outFile), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -109,7 +111,7 @@ func main() {
 	<-done
 	insertBatch(db, batch, nil)
 
-	log.Printf("Done. Took %s", time.Since(start))
+	log.Printf("Took %s", time.Since(start))
 }
 
 func insertBatch(db *gorm.DB, b []Entry, done chan bool) {
