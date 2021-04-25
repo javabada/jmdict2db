@@ -17,6 +17,7 @@ import (
 
 func main() {
 	start := time.Now()
+
 	f, err := os.Open("JMdict_e.gz")
 	if err != nil {
 		log.Fatal(err)
@@ -40,31 +41,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db.AutoMigrate(&Entity{})
-	db.AutoMigrate(&Entry{})
-	db.AutoMigrate(&Kanji{})
-	db.AutoMigrate(&KanjiInfo{})
-	db.AutoMigrate(&KanjiPriority{})
-	db.AutoMigrate(&Reading{})
-	db.AutoMigrate(&ReadingRestriction{})
-	db.AutoMigrate(&ReadingInfo{})
-	db.AutoMigrate(&ReadingPriority{})
-	db.AutoMigrate(&Sense{})
-	db.AutoMigrate(&SenseKanjiRestriction{})
-	db.AutoMigrate(&SenseReadingRestriction{})
-	db.AutoMigrate(&SenseCrossReference{})
-	db.AutoMigrate(&SenseAntonym{})
-	db.AutoMigrate(&SensePartOfSpeech{})
-	db.AutoMigrate(&SenseFieldOfApplication{})
-	db.AutoMigrate(&SenseMiscInfo{})
-	db.AutoMigrate(&SenseSourceLanguage{})
-	db.AutoMigrate(&SenseDialect{})
-	db.AutoMigrate(&SenseGloss{})
-	db.AutoMigrate(&SenseInfo{})
+	db.AutoMigrate(&Entity{}, &Entry{}, &Kanji{}, &KanjiInfo{}, &KanjiPriority{},
+		&Reading{}, &ReadingRestriction{}, &ReadingInfo{}, &ReadingPriority{},
+		&Sense{}, &SenseKanjiRestriction{}, &SenseReadingRestriction{},
+		&SenseCrossReference{}, &SenseAntonym{}, &SensePartOfSpeech{},
+		&SenseFieldOfApplication{}, &SenseMiscInfo{}, &SenseSourceLanguage{},
+		&SenseDialect{}, &SenseGloss{}, &SenseInfo{})
 
 	dec := xml.NewDecoder(r)
 
-	curr := 0
+	curr := 0 // TODO: used while dev, remove later
 
 	var batch []Entry
 
@@ -94,7 +80,6 @@ func main() {
 				}
 
 				dec.Entity = m
-
 				db.CreateInBatches(s, len(s))
 			}
 		case xml.StartElement:
@@ -114,8 +99,7 @@ func main() {
 		}
 	}
 
-	elapsed := time.Since(start)
-	log.Printf("Took %s", elapsed)
+	log.Printf("Done. Took %s", time.Since(start))
 }
 
 var reEntity = regexp.MustCompile(`<!ENTITY\s+(\S+)\s+"([^"]+)">`)
