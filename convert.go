@@ -52,7 +52,7 @@ type Reading struct {
 	ID          uint
 	EntrySeq    uint
 	Element     string               `xml:"reb" gorm:"notNull"`
-	NoKanji     *Exist               `xml:"re_nokanji" gorm:"notNull"`
+	NoKanji     *BoolTag             `xml:"re_nokanji" gorm:"notNull"`
 	Restriction []ReadingRestriction `xml:"re_restr"`
 	Info        []ReadingInfo        `xml:"re_inf"`
 	Priority    []ReadingPriority    `xml:"re_pri"`
@@ -136,11 +136,11 @@ type SenseMiscInfo struct {
 
 type SenseSourceLanguage struct {
 	ID       uint
-	SenseID  uint
-	Language *string `xml:"lang,attr"`
-	Partial  *string `xml:"ls_type,attr"`
-	Wasei    *string `xml:"ls_wasei,attr"`
-	Word     *string `xml:",chardata"`
+	SenseID  uint           `gorm:"notNull"`
+	Language string         `xml:"lang,attr" gorm:"notNull;default:eng"`
+	Partial  *BoolAttr      `xml:"ls_type,attr" gorm:"notNull"`
+	Wasei    *BoolAttr      `xml:"ls_wasei,attr" gorm:"notNull"`
+	Text     NullableString `xml:",chardata"`
 }
 
 type SenseDialect struct {
@@ -153,19 +153,34 @@ type SenseGloss struct {
 	ID      uint
 	SenseID uint
 	Type    *string `xml:"g_type,attr"`
-	Item    string  `xml:",chardata"`
+	Text    string  `xml:",chardata"`
 }
 
 type SenseMoreInfo struct {
-	ID      uint
-	SenseID uint
-	Code    string `xml:",chardata" gorm:"notNull"`
+	ID         uint
+	SenseID    uint
+	EntityCode string `xml:",chardata" gorm:"notNull"`
 }
 
-type Exist struct{}
+type BoolTag struct{}
 
-func (e *Exist) Value() (driver.Value, error) {
-	return e != nil, nil
+func (s *BoolTag) Value() (driver.Value, error) {
+	return s != nil, nil
+}
+
+type BoolAttr string
+
+func (s *BoolAttr) Value() (driver.Value, error) {
+	return s != nil, nil
+}
+
+type NullableString string
+
+func (s NullableString) Value() (driver.Value, error) {
+	if s == "" {
+		return nil, nil
+	}
+	return string(s), nil
 }
 
 func main() {
@@ -220,7 +235,6 @@ func main() {
 	curr := 0
 
 	var batch []Entry
-	// batchIndex := 0
 
 	for curr < 20000 {
 		tok, err := dec.Token()
