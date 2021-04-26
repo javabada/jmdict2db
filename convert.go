@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"regexp"
 	"time"
@@ -15,14 +16,22 @@ import (
 	"gorm.io/gorm"
 )
 
-const inFile = "JMdict_e.gz"
-const outFile = "jmdict.db"
+const url = "http://ftp.edrdg.org/pub/Nihongo/JMdict_e.gz"
+const filePath = "JMdict_e.gz"
+const dbPath = "jmdict.db"
 const batchSize = 500
 
 func main() {
-	start := time.Now()
+	timer := time.Now()
 
-	f, err := os.Open(inFile)
+	if err := dlFile(url, filePath); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Download took: %s", time.Since(timer))
+	timer = time.Now()
+
+	f, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,13 +43,13 @@ func main() {
 	}
 	defer r.Close()
 
-	if err := os.Remove(outFile); err != nil {
+	if err := os.Remove(dbPath); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			log.Fatal(err)
 		}
 	}
 
-	db, err := gorm.Open(sqlite.Open(outFile), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -111,7 +120,24 @@ func main() {
 	<-done
 	insertBatch(db, batch, nil)
 
-	log.Printf("Took %s", time.Since(start))
+	log.Printf("Conversion took: %s", time.Since(timer))
+}
+
+func dlFile(url, out string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	f, err := os.Create(out)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = io.Copy(f, resp.Body)
+	return err
 }
 
 func insertBatch(db *gorm.DB, b []Entry, done chan bool) {
